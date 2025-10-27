@@ -1,0 +1,9 @@
+#left-column {
+    color:grey;
+    width:30%;
+    float: left;
+}
+#right-column {
+    width:65%;
+    float: left;
+}
