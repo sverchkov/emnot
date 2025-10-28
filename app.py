@@ -1,11 +1,10 @@
 """EMNOT: Evaluate Metadata Normalization to Ontology Terms"""
 
-from dash import Dash, html, dcc, callback, Output, Input
+from dash import Dash, html, dcc, callback, Output, Input, no_update
+import dash_ag_grid as dag
 import plotly.express as px
 import pandas as pd
-
-# Static data loading
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
+import json
 
 # App instamce
 app = Dash(
@@ -13,47 +12,93 @@ app = Dash(
 #    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
 )
 
+def str_to_list(s):
+    if s is None: return None
+    if s == '[]': return []
+    parts = s.strip('[]').split(', ')
+    return [p.strip('\'"') for p in parts]
+
+# Load data for grid
+df = pd.read_csv('data/method_comparisons.csv').rename(columns=lambda s: s.replace('.','_'))
+for i, col in enumerate(df.columns):
+    if i < 1:
+        continue
+    df.loc[~df[col].isna(), col] = df.loc[~df[col].isna(), col].apply(str_to_list)
+
+# Dash grid
+grid = dag.AgGrid(
+    id="main-grid",
+    rowData=df.to_dict("records"),
+    columnDefs=[{"field": i, "filter": True} for i in df.columns],
+    dashGridOptions={
+        'rowSelection': {'mode': 'single'}
+    }
+)
+
+def subgrid_updater(col):
+    def update_subgrid(selection):
+        if selection:
+            s = selection[0]
+            if s[col] is None: return []
+            return [{col: x} for x in s[col]]
+        return no_update
+    return update_subgrid
+
+def make_detail_cards():
+
+    sub_grids = []
+
+    for i, col in enumerate(df.columns):
+        # To-do: make this content based
+        if i == 0: continue
+
+        sub_grid_id = f"column-{i}-detailed-grid"
+
+        sub_grids.append(
+            dag.AgGrid(
+                id=sub_grid_id,
+                rowData=[],
+                columnDefs=[{"field": col}]
+            )
+        )
+
+        callback(
+            Output(sub_grid_id, "rowData"),
+            Input("main-grid", "selectedRows")
+        )(subgrid_updater(col))
+        
+
+    return [
+        html.Div(
+            # set a class? will explicitly set style for now
+            style={
+                'float': 'left',
+                'width': '350px'
+            },
+            children=[sub_grid]
+        )
+        for sub_grid in sub_grids
+    ]
+        
+
 # Layout
 app.layout = html.Div(
     id="app-container",
     children=[
-        # Left panel
+        # Banner
         html.Div(
-            id="left-column",
             children=[
                 html.H1(children='Evaluate Metadata Normalization to Ontology Terms', style={'textAlign':'center'}),
-                dcc.Dropdown([], placeholder='Terms to filter by', id='dropdown-filter1'),
-                dcc.Dropdown([], placeholder='Terms to filter by', id='dropdown-filter2'),
-                dcc.Dropdown(
-                    df.country.drop_duplicates(),
-                    placeholder='Select sample',
-                    closeOnSelect=False,
-                    id='dropdown-selection'
-                )
             ]
         ),
-        # Right panel
+        # Top panel
         html.Div(
-            id="right-column",
-            children=[
-                html.Div(),
-                html.Div(),
-                html.Div(),
-                dcc.Graph(id='graph-content')
-            ]
-        )
+            children=[grid]
+        ),
+        # Detailed panels
+        html.Div(children=make_detail_cards())
     ]
 )
-
-@callback(
-    Output('graph-content', 'figure'),
-    Input('dropdown-selection', 'value')
-)
-
-# Server side
-def update_graph(value):
-    dff = df[df.country==value]
-    return px.line(dff, x='year', y='pop')
 
 # Script entry
 if __name__ == '__main__':
