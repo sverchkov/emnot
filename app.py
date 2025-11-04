@@ -1,10 +1,13 @@
 """EMNOT: Evaluate Metadata Normalization to Ontology Terms"""
 
+import ast
+import json
+from collections.abc import Mapping, Collection
+
 from dash import Dash, html, dcc, callback, Output, Input, no_update
 import dash_ag_grid as dag
 import plotly.express as px
 import pandas as pd
-import json
 
 # App instamce
 app = Dash(
@@ -12,24 +15,14 @@ app = Dash(
 #    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
 )
 
-def str_to_list(s):
-    if s is None: return None
-    if s == '[]': return []
-    parts = s.strip('[]').split(', ')
-    return [p.strip('\'"') for p in parts]
-
 # Load data for grid
-df = pd.read_csv('data/method_comparisons.csv').rename(columns=lambda s: s.replace('.','_'))
-for i, col in enumerate(df.columns):
-    if i < 1:
-        continue
-    df.loc[~df[col].isna(), col] = df.loc[~df[col].isna(), col].apply(str_to_list)
+df = pd.read_csv('data/method_comparisons.csv', nrows=200000).rename(columns=lambda s: s.replace('.','_'))
 
 # Dash grid
 grid = dag.AgGrid(
     id="main-grid",
     rowData=df.to_dict("records"),
-    columnDefs=[{"field": i, "filter": True} for i in df.columns],
+    columnDefs=[{"field": i, "filter": True, 'cellDataType': 'text'} for i in df.columns],
     dashGridOptions={
         'rowSelection': {'mode': 'single'}
     }
@@ -38,15 +31,28 @@ grid = dag.AgGrid(
 def subgrid_updater(col):
     def update_subgrid(selection):
         if selection:
-            s = selection[0]
-            if s[col] is None: return []
-            return [{col: x} for x in s[col]]
+            content_obj = selection[0][col]
+            if content_obj is None: return []
+            
+            try:
+                content_obj = ast.literal_eval(content_obj)
+            except:
+                print(f'Did not parse "{content_obj}"')
+            
+            if isinstance(content_obj, Mapping):
+                #print(f'{col} is a mapping')
+                return [{'key': k, 'value': v} for k, v in content_obj.items()]
+            if isinstance(content_obj, Collection):
+                #print(f'{col} is a collection')
+                return [{'value': v} for v in content_obj]
+            #print(f'{col} is something else')
+            return [{'value': content_obj}] # Fallback, do we need?
         return no_update
     return update_subgrid
 
 def make_detail_cards():
 
-    sub_grids = []
+    elements = []
 
     for i, col in enumerate(df.columns):
         # To-do: make this content based
@@ -54,12 +60,10 @@ def make_detail_cards():
 
         sub_grid_id = f"column-{i}-detailed-grid"
 
-        sub_grids.append(
-            dag.AgGrid(
-                id=sub_grid_id,
-                rowData=[],
-                columnDefs=[{"field": col}]
-            )
+        sub_grid = dag.AgGrid(
+            id=sub_grid_id,
+            rowData=[],
+            columnDefs=[{"field": "key"}, {"field": "value"}]
         )
 
         callback(
@@ -67,18 +71,17 @@ def make_detail_cards():
             Input("main-grid", "selectedRows")
         )(subgrid_updater(col))
         
-
-    return [
-        html.Div(
-            # set a class? will explicitly set style for now
-            style={
-                'float': 'left',
-                'width': '350px'
-            },
-            children=[sub_grid]
+        elements.append(
+            html.Div(
+                className='card',
+                children=[
+                    html.H4(children=col),
+                    sub_grid
+                ]
+            )
         )
-        for sub_grid in sub_grids
-    ]
+
+    return elements
         
 
 # Layout
