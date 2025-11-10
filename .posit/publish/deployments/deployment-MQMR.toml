@@ -11,9 +11,9 @@ id = '2346e8f4-b962-4bb0-9b87-44f0ec4a2615'
 dashboard_url = 'https://connect.doit.wisc.edu/connect/#/apps/2346e8f4-b962-4bb0-9b87-44f0ec4a2615'
 direct_url = 'https://connect.doit.wisc.edu/content/2346e8f4-b962-4bb0-9b87-44f0ec4a2615/'
 logs_url = 'https://connect.doit.wisc.edu/connect/#/apps/2346e8f4-b962-4bb0-9b87-44f0ec4a2615/logs'
-deployed_at = '2025-11-04T10:56:18-06:00'
-bundle_id = '4232'
-bundle_url = 'https://connect.doit.wisc.edu/__api__/v1/content/2346e8f4-b962-4bb0-9b87-44f0ec4a2615/bundles/4232/download'
+deployed_at = '2025-11-10T10:09:21-06:00'
+bundle_id = '4240'
+bundle_url = 'https://connect.doit.wisc.edu/__api__/v1/content/2346e8f4-b962-4bb0-9b87-44f0ec4a2615/bundles/4240/download'
 files = [
   '.posit/publish/EMNOT-SSBS.toml',
   '.posit/publish/deployments/deployment-MQMR.toml',
