@@ -63,7 +63,16 @@ def make_detail_cards():
         sub_grid = dag.AgGrid(
             id=sub_grid_id,
             rowData=[],
-            columnDefs=[{"field": "key"}, {"field": "value"}]
+            columnDefs=[{"field": "key"}, {"field": "value"}],
+            defaultColDef={
+                'resizable': True,
+                'cellStyle': {'wordBreak': 'normal'},
+                'wrapText': True,
+                'autoHeight': True
+            },
+            dashGridOptions = {'enableCellTextSelection': True, 'ensureDomOrder': True},
+            # Order of colIDs here will change display order
+            columnState=[{'colId': 'key'}, {'colId': 'value', 'sort': 'asc'}]
         )
 
         callback(
