@@ -6,13 +6,17 @@ from collections.abc import Mapping, Collection
 
 from dash import Dash, html, dcc, callback, Output, Input, no_update
 import dash_ag_grid as dag
-import plotly.express as px
+import dash_bootstrap_components as dbc
+
+#import plotly.express as px
+
 import pandas as pd
 
 # App instamce
 app = Dash(
 #    name=__name__,
 #    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
+    external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP]
 )
 
 # Load data for grid
@@ -80,15 +84,10 @@ def make_detail_cards():
             Input("main-grid", "selectedRows")
         )(subgrid_updater(col))
         
-        elements.append(
-            html.Div(
-                className='card',
-                children=[
-                    html.H4(children=col),
-                    sub_grid
-                ]
-            )
-        )
+        elements.append({
+            'title': col,
+            'grid': sub_grid
+        })
 
     return elements
         
@@ -98,17 +97,30 @@ app.layout = html.Div(
     id="app-container",
     children=[
         # Banner
-        html.Div(
+        dbc.NavbarSimple(
             children=[
-                html.H1(children='Evaluate Metadata Normalization to Ontology Terms', style={'textAlign':'center'}),
-            ]
+                dbc.NavItem(dbc.NavLink(
+                    html.I(className='bi bi-github'),
+                    href='https://github.com/sverchkov/emnot'
+                ))
+            ],
+            brand='Evaluate Metadata Normalization to Ontology Terms'
         ),
         # Top panel
         html.Div(
             children=[grid]
         ),
         # Detailed panels
-        html.Div(children=make_detail_cards())
+        html.Div(children=[
+            dbc.Card(
+                children=[
+                    html.H5(card_content['title'], className='card-title'),
+                    card_content['grid']
+                ],
+                body=True
+            )
+            for card_content in make_detail_cards()
+        ])
     ]
 )
 
